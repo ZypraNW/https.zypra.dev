@@ -1,0 +1,121 @@
+#pragma compat 1
+#include 				<a_samp>    		/*Yapýmcý: SA-MP Developer*/
+#include 				<zcmd>      		/*Yapýmcý: Zypra.dev*/
+#include 				<streamer>  		/*Yapýmcý: Zypra.dev*/
+#include                <sscanf2>           /*Yapýmcý: Emmet_*/
+
+#define                 SISTEMADI           "Çiftçilik Sistemi"
+#define                 SURUM               "0.2"
+#define                 KODLAYAN            "Developer Team"
+
+#define                 DEPOKAPASITE        (99999)
+
+#define                 DIALOG_CIFTCILIK    (1)
+
+new 					Ciftci[MAX_PLAYERS],
+						YerlestirilmisUrun,
+						Text3D:AvluText;
+
+public OnFilterScriptInit()
+{
+	printf("Sistem: %s", SISTEMADI);
+	printf("Sürüm: %s", SURUM);
+	printf("Kodlayan: %s", KODLAYAN);
+	print("Baþarýyla entegre edildi.");
+
+	CreateDynamicPickup(2901, 1, 235.7795,1139.1947,11.9962);
+	CreateDynamic3DTextLabel("{56AA79}[Depo]\n{FFFFFF}/saman al", -1, 235.7795, 1139.1947, 11.9962, 15.0);
+
+	YerlestirilmisUrun = 0;
+	new string[128];
+	format(string, sizeof(string), "{56AA79}[Avlu]\n{FFFFFF}/saman koy\n{56AA79}%d/%d", YerlestirilmisUrun, DEPOKAPASITE);
+	AvluText = CreateDynamic3DTextLabel(string, -1, 314.9760, 1152.0338, 8.5859, 15.0);
+	CreateDynamicPickup(2901, 1, 314.9760, 1152.0338, 8.5859);
+	return 1;
+}
+
+public OnFilterScriptExit()
+{
+	printf("Sistem: %s", SISTEMADI);
+	printf("Sürüm: %s", SURUM);
+	printf("Kodlayan: %s", KODLAYAN);
+	print("Baþarýyla de-aktif edildi.");
+	
+	YerlestirilmisUrun = 0;
+	return 1;
+}
+
+public OnPlayerConnect(playerid)
+{
+	SetPVarInt(playerid, "SamanTasiyor", 0);
+	return 1;
+}
+
+public OnPlayerDisconnect(playerid, reason)
+{
+	return 1;
+}
+
+public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
+{
+	if(dialogid == DIALOG_CIFTCILIK)
+	{
+	    if(response)
+	    {
+	    SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Baþarýyla çiftçilik mesleðine girdiniz.");
+	    SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Depoya giderek '/saman al' komutuyla iþe baþlayabilirsiniz.");
+        SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Avluya koyduðunuz her saman için $5 ücret alacaksýnýz.");
+        Ciftci[playerid] = 1;
+        SetPlayerSkin(playerid, 34);
+		}
+	}
+	return 1;
+}
+
+CMD:saman(playerid, params[])
+{
+	if(YerlestirilmisUrun == DEPOKAPASITE)
+ 		return SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Avlu dolduðu için bu komutu kullanamazsýnýz.");
+
+	if(isnull(params))
+	    return SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Kullaným: /saman [al/koy]");
+
+	if(!strcmp(params, "al", true))
+	{
+		if(GetPVarInt(playerid, "SamanTasiyor") == 1)
+		    return SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Zaten saman taþýyorsunuz.");
+
+		if(!IsPlayerInRangeOfPoint(playerid, 1.0, 235.7795, 1139.1947, 11.9962))
+	    	return SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Saman almak için deponun önünde olmalýsýnýz.");
+
+		SetPVarInt(playerid, "SamanTasiyor", 1);
+		ApplyAnimation(playerid, "BOMBER", "BOM_Plant", 4.0, 0, 0, 0, 0, 5000, 1);
+		SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
+		SetPlayerAttachedObject(playerid, 0, 2901, 5, 0.101, -0.0, 0.0, 5.50, 90, 90, 1, 1);
+		SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Saman yýðýnýný aldýnýz. Avluya götürerek '/saman koy' komutunu kullanabilirsiniz.");
+	}
+	
+	else if(!strcmp(params, "koy", true))
+	{
+		if(GetPVarInt(playerid, "SamanTasiyor") == 0)
+		    return SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Bu komutu kullanabilmek için elinizde saman olmalý.");
+
+		if(!IsPlayerInRangeOfPoint(playerid, 10.0, 314.9760, 1152.0338, 8.5859))
+	    	return SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Saman yýðýnýný býrakmak için avlunun içerisinde olmalýsýnýz.");
+
+        ApplyAnimation(playerid, "BOMBER", "BOM_Plant", 4.0, 0, 0, 0, 0, 5000, 1);
+		RemovePlayerAttachedObject(playerid, 0);
+		SetPVarInt(playerid, "SamanTasiyor", 0);
+		GivePlayerMoney(playerid, 30);
+		SetPlayerSpecialAction(playerid, SPECIAL_ACTION_NONE);
+		YerlestirilmisUrun += 1;
+		SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Saman yýðýnýný avluya býraktýnýz ve {56AA79}$5 {FFFFFF}kazandýnýz.");
+
+		new string[128];
+		format(string, sizeof(string), "{56AA79}[Avlu]\n{FFFFFF}/saman koy\n{56AA79}%d/%d", YerlestirilmisUrun, DEPOKAPASITE);
+		UpdateDynamic3DTextLabelText(AvluText, -1, string);
+	}
+
+	else return SendClientMessage(playerid, -1, "{56AA79}[Çiftçilik] {FFFFFF}Kullaným: /saman [al/koy]");
+	return 1;
+}
